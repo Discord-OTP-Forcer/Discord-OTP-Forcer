@@ -1,9 +1,9 @@
 from src.backend import bootstrap_browser, bootstrap_code_page, try_codes
 from src.config.config_parser import load_configuration
-from src.logger.log_init import initialize_logger, initialize_check_logger
 from src.lib.types import (
     BrowserSession,
 )
+from src.logger.log_init import initialize_check_logger, initialize_logger
 
 if __name__ == "__main__":
     initialize_check_logger()
@@ -28,9 +28,10 @@ if __name__ == "__main__":
             print(stackprinter.format(error, style="darkbg2"))
         else:
             import traceback
+
             import pygments
-            from pygments.lexers import PythonTracebackLexer
             from pygments.formatters import TerminalTrueColorFormatter
+            from pygments.lexers import PythonTracebackLexer
 
             tb = traceback.format_exc()
             print(pygments.highlight(tb, PythonTracebackLexer(), TerminalTrueColorFormatter(style="native")))
