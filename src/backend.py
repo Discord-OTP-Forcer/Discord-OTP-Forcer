@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 from pprint import pformat
-from typing import assert_never
+from typing import Final, assert_never
 
 from loguru import logger
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -43,6 +43,8 @@ from .lib.types import (
     TokenExpired,
     UnknownError,
 )
+
+_IS_A_BUG_STRING: Final[str] = "If you think this is a bug, please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
 
 logger.level(name="SENSITIVE", no=15, color="<m><b>")
 
@@ -186,33 +188,17 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
         except TimeoutException:
             match config.program.codeMode:
                 case CodeMode_Backup():
-                    logger.critical(
-                        "Cannot use backup mode - you likely have no backup codes left. "
-                        "If you think this is a bug, "
-                        "please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-                    )
+                    logger.critical("Cannot use Backup mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
                 case CodeMode_Normal():
-                    logger.critical(
-                        "Cannot use normal mode - it's likely that you do not have an authenticator app linked to your Discord account. "
-                        "If you think this is a bug, "
-                        "please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-                    )
+                    logger.critical("Cannot use Normal mode - it's likely that you DO NOT have an authenticator app linked to your Discord account. ", _IS_A_BUG_STRING)
                 case _:
-                    logger.critical(
-                        "Cannot use backup mode with regex mode - you likely have no backup codes left. "
-                        "If you think this is a bug, "
-                        "please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-                    )
+                    logger.critical("Cannot use Backup mode with regex mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
             sys.exit(1)
     except TimeoutException as only_normal_code_mode_found:
         logger.debug("Only found one TOTP method, proceeding with it")
         match config.program.codeMode:
             case CodeMode_Backup():
-                logger.critical(
-                    "Cannot use backup mode - you likely have no backup codes left. "
-                    "If you think this is a bug, "
-                    "please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-                )
+                logger.critical("Cannot use backup mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
                 sys.exit(1)
             case CodeMode_Normal():
                 try:
@@ -224,16 +210,12 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
                     # TODO: Need to document or test more this
                     logger.critical(
                         "Cannot use normal mode - Unknown error on exception 'only_normal_code_mode_found'. "
-                        "please report this by creating an issue at codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new "
+                        "Please report this by creating an issue at codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new "
                         "so that the developers can look into the issue and fix it."
                     )
                     sys.exit(1)
             case _:
-                logger.critical(
-                    "Cannot use backup mode with regex mode - you likely have no backup codes left. "
-                    "If you think this is a bug, "
-                    "please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-                )
+                logger.critical("Cannot use backup mode with regex mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
                 sys.exit(1)
 
     # Check if the code field exists
