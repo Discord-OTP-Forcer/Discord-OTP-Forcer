@@ -1,7 +1,11 @@
+from src.auth.token_login import login_with_discord_auth_token
 from src.backend import bootstrap_browser, bootstrap_code_page, try_codes
 from src.config.config_parser import load_configuration
+from src.lib.check_updates import check_for_updates
 from src.lib.types import (
     BrowserSession,
+    CensoredStr,
+    TokenFound,
 )
 from src.logger.log_init import initialize_check_logger, initialize_logger
 
@@ -12,14 +16,15 @@ if __name__ == "__main__":
     session: BrowserSession | None = None
 
     if config.program.checkUpdates:
-        from src.lib.check_updates import check_for_updates
-
         check_for_updates()
 
     try:
         session = bootstrap_browser(config)
-        session = bootstrap_code_page(session)
-        try_codes(session)
+        if config.account.authToken:
+            login_with_discord_auth_token(session, TokenFound(raw=CensoredStr(config.account.authToken)))
+        else:
+            session = bootstrap_code_page(session)
+            try_codes(session)
 
     except Exception as error:
         if config.program.logLevel in ("SENSITIVE", "DEBUG"):

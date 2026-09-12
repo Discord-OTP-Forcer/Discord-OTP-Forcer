@@ -24,5 +24,8 @@ password: ""
 newPassword: ""
 resetToken: ""
 
-# This option isn't implemented yet. Filling it out doesn't do anything (yet)
+# Auth Token Info
+#
+# When you get or have your discord Auth token, you can paste it
+# here and this program will login on your account.
 authToken: ""
