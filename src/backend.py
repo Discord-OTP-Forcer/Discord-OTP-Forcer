@@ -40,6 +40,7 @@ from .lib.types import (
     RateLimited,
     ServiceUnavailable,
     SessionStats,
+    Stopwatch,
     TokenExpired,
     UnknownError,
 )
@@ -254,7 +255,7 @@ def try_codes(session: BrowserSession) -> None:
 
     # Set up statistics counters
     sessionStats: SessionStats = SessionStats(0, 0, 0, 0, 0, 0)
-    start_time: float = time.time()
+    timer: Stopwatch = Stopwatch()
 
     sleep_duration_range: list[int]
 
@@ -382,7 +383,8 @@ def try_codes(session: BrowserSession) -> None:
     except KeyboardInterrupt:
         logger.critical("Stopping the program on KeyboardInterrupt!")
 
-    sessionStats.elapsedTimeSeconds = time.time() - start_time
+    timer.stop()
+    sessionStats.elapsedTimeSeconds = timer.elapsed()
     logger.critical("Program finished!")
     print_session_statistics(sessionStats)
 

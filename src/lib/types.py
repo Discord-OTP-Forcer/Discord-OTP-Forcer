@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from enum import Enum, StrEnum
 from typing import NewType, TypedDict
 
@@ -178,6 +179,23 @@ class CodeStatusNotFound:
 
 
 CodeStatusResult = CodeStatusFound | CodeStatusNotFound
+
+
+@dataclass(slots=True)
+class Stopwatch:
+    _start: float = field(default_factory=time.monotonic)
+    _stop: float | None = None
+
+    def stop(self) -> None:
+        self._stop = time.monotonic()
+
+    def elapsed(self) -> float:
+        # If the Stopwatch stopped, return the elapsed time between start time and stop time
+        if self._stop is not None:
+            return self._stop - self._start
+
+        # If not, return the elapsed time between start time and now
+        return time.monotonic() - self._start
 
 
 @dataclass(frozen=True)
