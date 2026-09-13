@@ -48,4 +48,4 @@ quote-style = "preserve"
 line-ending = "lf"
 
 [tool.ruff]
-line-length = 170
+line-length = 190
