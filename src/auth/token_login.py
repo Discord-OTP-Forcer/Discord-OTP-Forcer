@@ -25,7 +25,7 @@ def login_with_discord_auth_token(
 
     driver.get("https://discord.com/login")
     logger.info("Injecting discord auth token into Discord session...")
-    driver.execute_script(_TOKEN_LOGIN_JS, str(auth_token.raw))
+    driver.execute_script(_TOKEN_LOGIN_JS, str(auth_token.token))
 
     try:
         wait.until(CheckLoginSuccess())
