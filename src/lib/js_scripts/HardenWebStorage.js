@@ -11,7 +11,7 @@
 			return;
 		}
 
-		if (!desc || !desc.get) return;
+		if (!desc?.get) return;
 
 		if (desc.configurable === false) return;
 
