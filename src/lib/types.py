@@ -1,9 +1,14 @@
 import time
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
-from typing import NewType, TypedDict
+from pathlib import Path
+from typing import NewType, TypedDict, assert_never
 
+from selenium.webdriver.common.by import By, ByType
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support.ui import WebDriverWait
+
+from src.auth.code_errors import get_code_status
 
 """
 This is the canonical definition for program and account configuration. all possibilities defined here
@@ -179,6 +184,87 @@ class CodeStatusNotFound:
 
 
 CodeStatusResult = CodeStatusFound | CodeStatusNotFound
+
+
+@dataclass(frozen=True, slots=True)
+class SubmissionSuccess:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class SubmissionError:
+    status: CodeStatusFound
+
+
+@dataclass(frozen=True, slots=True)
+class SubmissionTimeout:
+    pass
+
+
+@dataclass(frozen=True, slots=True)
+class SubmissionPending:
+    pass
+
+
+SubmissionResult = SubmissionSuccess | SubmissionError | SubmissionTimeout | SubmissionPending
+
+
+@dataclass(frozen=True, slots=True)
+class CheckLoginSuccess:
+    """Callable condition that checks if the program has successfully logged in."""
+
+    homepage: tuple[ByType, str] = (By.CLASS_NAME, "app__160d8")
+
+    def check(self, driver: WebDriver) -> bool:
+        """Default check."""
+        return "/channels" in driver.current_url or bool(driver.find_elements(*self.homepage))
+
+    def __call__(self, driver: WebDriver) -> bool:
+        """Delegates to self.check for Selenium's WebDriverWait callable condition."""
+        return self.check(driver)
+
+
+@dataclass(frozen=True, slots=True)
+class CheckSubmissionResult:
+    """Callable condition that checks the outcome of a code submission."""
+
+    code_status_elt: tuple[ByType, str]
+    wait: WebDriverWait[WebDriver]
+
+    login: CheckLoginSuccess = CheckLoginSuccess()
+
+    def check(self, driver: WebDriver) -> SubmissionResult:
+        """Determines whether the submission succeeded, failed, or is still pending."""
+
+        if self.login.check(driver):
+            return SubmissionSuccess()
+
+        match get_code_status(driver, self.wait, self.code_status_elt):
+            case CodeStatusFound() as found:
+                return SubmissionError(status=found)
+            case CodeStatusNotFound():
+                if self.login.check(driver):
+                    return SubmissionSuccess()
+                return SubmissionPending()
+            case _ as unreachable:
+                assert_never(unreachable)
+
+
+@dataclass(frozen=True, slots=True)
+class TokenFound:
+    token: CensoredStr
+
+    def save_to_file(self, path: Path) -> None:
+        with path.open("a+", encoding="utf-8") as f:
+            f.write(f"{self.token}\n")
+
+
+@dataclass(frozen=True, slots=True)
+class TokenNotFound:
+    pass
+
+
+Token = TokenFound | TokenNotFound
 
 
 @dataclass(slots=True)
