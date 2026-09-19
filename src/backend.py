@@ -1,18 +1,16 @@
 # Import dependencies and libraries
 import secrets
 import sys
-import threading
 import time
 from pathlib import Path
 from pprint import pformat
 from typing import Final, assert_never
 
 from loguru import logger
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By, ByType
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement as Element
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from seleniumbase import Driver
@@ -21,18 +19,19 @@ from src.binary_finder.find_chromium import find_chromium_binary, register_chrom
 from src.binary_finder.find_thorium import find_thorium_binary, register_thorium_browser
 
 from .auth.captcha import captcha_detection
-from .auth.code_errors import get_code_status, parse_code_error
+from .auth.code_errors import parse_code_error
+from .auth.token_extraction import extract_token
 from .lib.codegen import generate_random_code
 from .lib.exceptions import InvalidCredentialError
 from .lib.types import (
     BinaryPath,
     Browser,
     BrowserSession,
+    CheckSubmissionResult,
     CodeMode,
     CodeMode_Backup,
     CodeMode_Normal,
     CodeStatusFound,
-    CodeStatusNotFound,
     Config,
     InvalidCode,
     NetworkOffline,
@@ -41,7 +40,14 @@ from .lib.types import (
     ServiceUnavailable,
     SessionStats,
     Stopwatch,
+    SubmissionError,
+    SubmissionPending,
+    SubmissionResult,
+    SubmissionSuccess,
+    SubmissionTimeout,
     TokenExpired,
+    TokenFound,
+    TokenNotFound,
     UnknownError,
 )
 
@@ -72,7 +78,7 @@ def bootstrap_browser(config: Config) -> BrowserSession:
 
     match config.program.browser:
         case Browser.Chrome | Browser.Brave | Browser.Chromium | Browser.Thorium:
-            _HARDEN_WEB_STORAGE_JS = (Path(__file__).parent / "lib/js_scripts" / "HardenWebStorage.js").read_text(encoding="utf-8")
+            _HARDEN_WEB_STORAGE_JS: Final[str] = (Path(__file__).parent / "lib/js_scripts" / "HardenWebStorage.js").read_text(encoding="utf-8")
 
             driver = Driver(
                 browser="chrome" if config.program.browser in (Browser.Chromium, Browser.Thorium) else config.program.browser,
@@ -169,7 +175,6 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
         logger.critical("If that does not fix the issue, please create a new issue at codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new to ask for help.")
         sys.exit(1)
 
-    wait.until(EC.presence_of_element_located(password_field)).send_keys(Keys.RETURN)
     logger.debug("Found and filled in basic login fields")
 
     captcha_detection(session)
@@ -240,8 +245,37 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
     return session
 
 
-def _code_taking_long() -> None:
-    logger.warning("Code taking longer than 15s to submit, you may be on a slow network or rate-limited. Waiting for status...")
+def wait_for_submission_result(
+    driver: WebDriver,
+    code_status_elt: tuple[ByType, str],
+) -> SubmissionResult:
+    """Polls the submission result of a generated code."""
+
+    wait: WebDriverWait[WebDriver] = WebDriverWait(driver, 0.5)
+    warned_taking_long: bool = False
+
+    condition: CheckSubmissionResult = CheckSubmissionResult(
+        code_status_elt=code_status_elt,
+        wait=wait,
+    )
+
+    timer: Stopwatch = Stopwatch()
+
+    # Poll until condition.check() returns a non-pending result or timeout.
+    while timer.elapsed() < 60.0:
+        if not warned_taking_long and timer.elapsed() >= 15.0:
+            logger.warning("Code taking longer than 15s to submit, you may be on a slow network or rate-limited. Waiting for status...")
+            warned_taking_long = True
+
+        result = condition.check(driver)
+        match result:
+            case SubmissionSuccess() | SubmissionError() | SubmissionTimeout():
+                return result
+            case SubmissionPending():
+                time.sleep(0.5)
+            case _ as unreachable:
+                assert_never(unreachable)
+    return SubmissionTimeout()
 
 
 def try_codes(session: BrowserSession) -> None:
@@ -249,8 +283,6 @@ def try_codes(session: BrowserSession) -> None:
     driver: WebDriver = session.driver
     config: Config = session.config
 
-    wait_60s: WebDriverWait[WebDriver] = WebDriverWait(driver, 60)
-    user_wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
     user_wait_longer: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance * 3)
 
     # Set up statistics counters
@@ -262,7 +294,6 @@ def try_codes(session: BrowserSession) -> None:
     submit_button: tuple[ByType, str] = (By.XPATH, "//*[@type='submit']")
     code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
     code_status_elt: tuple[ByType, str] = (By.CLASS_NAME, "error__7c901")
-    user_homepage: tuple[ByType, str] = (By.CLASS_NAME, "app__160d8")
 
     make_new_code: bool = False
     rate_limited: bool = False
@@ -320,65 +351,58 @@ def try_codes(session: BrowserSession) -> None:
                 continue
 
             # Success check. Break out if it succeeded.
-            try:
-                # CRITICAL PATH
-                # We want to know immediately if the homepage is present or not
-                login_test: Element = user_wait.until(EC.presence_of_element_located(user_homepage))
-                if login_test:
+            submission_result: SubmissionResult = wait_for_submission_result(
+                driver=driver,
+                code_status_elt=code_status_elt,
+            )
+
+            match submission_result:
+                case SubmissionSuccess():
                     logger.debug("Homepage found, trying to extract token")
-                    for i in range(100):
-                        logger.debug(f"Attempt {i + 1} of trying to extract token")
-                        token = driver.execute_script("return window.localStorage.getItem('token');")
-                        if token is not None:
+                    match extract_token(driver):
+                        case TokenFound() as tokenFound:
                             logger.info("FOUND YOUR ACCOUNT'S TOKEN. SAVE IT AND DO NOT LOG OUT OF DISCORD!")
-                            logger.success(token)
-                            with open("secret/token.txt", "a+") as f:
-                                f.write(token + "\n")
-                            break
-                        time.sleep(0.5)
-
-                    if token is None:
-                        logger.warning("Token not found but logged in successfully.")
+                            logger.success(tokenFound.token)
+                            tokenFound.save_to_file(Path("secret/token.txt"))
+                        case TokenNotFound():
+                            logger.warning("Token not found but logged in successfully.")
                     break
-            except (NoSuchElementException, TimeoutException) as login_didnt_work:
-                timer_code_taking_long = threading.Timer(15.0, _code_taking_long)
-                timer_code_taking_long.start()
-
-                try:
-                    match get_code_status(driver, wait_60s, code_status_elt):
-                        case CodeStatusFound(message=code_status_msg, used_fallback=used_fallback):
-                            if used_fallback:
-                                # fmt:off
-                                logger.warning(f"Code Status Element '{code_status_elt[1]}' not found, using fallback selectors. Please report this to the developers.")
-                                # fmt:on
-                            match parse_code_error(code_status_msg, random_code):
-                                case InvalidCode(attempted_code=code, raw_message=msg):
-                                    logger.warning(f"{msg}: {code}")
-                                    make_new_code = True
-                                case RateLimited(raw_message=msg):
-                                    logger.warning(msg)
-                                    sessionStats.ratelimitCount += 1
-                                    make_new_code = False
-                                    rate_limited = True
-                                case TokenExpired(raw_message=msg):
-                                    logger.critical(f"{msg}: The reset token has expired. Please create a new reset token and update it in config/account.yml")
-                                    sys.exit()
-                                case ServiceUnavailable(raw_message=msg):
-                                    logger.warning(f"{msg}: The service is unavailable, Discord is probably under maintenance.")
-                                    sessionStats.serviceUnavailableCount += 1
-                                    make_new_code = False
-                                case NetworkOffline(raw_message=msg):
-                                    logger.error("Network disconnection detected. Trying again in 15 seconds...")
-                                    time.sleep(15)
-                                    make_new_code = False
-                                case UnknownError(raw_message=msg):
-                                    logger.error(f"Encountered unimplemented status message. Tell the developers about this: {msg}")
-                        case CodeStatusNotFound():
-                            logger.warning("Status never arrived after 60 sec. Skipping.")
+                case SubmissionError(status=CodeStatusFound(message=code_status_msg, used_fallback=used_fallback)):
+                    if used_fallback:
+                        logger.warning(f"Code Status Element '{code_status_elt[1]}' not found, using fallback selectors. Please report this to the developers.")
+                    match parse_code_error(code_status_msg, random_code):
+                        case InvalidCode(attempted_code=code, raw_message=msg):
+                            logger.warning(f"{msg}: {code}")
+                            make_new_code = True
+                        case RateLimited(raw_message=msg):
+                            logger.warning(msg)
+                            sessionStats.ratelimitCount += 1
                             make_new_code = False
-                            sessionStats.slowDownCount += 1
-                finally:
-                    timer_code_taking_long.cancel()
+                            rate_limited = True
+                        case TokenExpired(raw_message=msg):
+                            logger.critical(f"{msg}: The reset token has expired. Please create a new reset token and update it in config/account.yml")
+                            sys.exit()
+                        case ServiceUnavailable(raw_message=msg):
+                            logger.warning(f"{msg}: The service is unavailable, Discord is probably under maintenance.")
+                            sessionStats.serviceUnavailableCount += 1
+                            make_new_code = False
+                        case NetworkOffline(raw_message=msg):
+                            logger.error("Network disconnection detected. Trying again in 15 seconds...")
+                            time.sleep(15)
+                            make_new_code = False
+                        case UnknownError(raw_message=msg):
+                            logger.error(f"Encountered unimplemented status message. Tell the developers about this: {msg}")
+                        case _ as unreachable:
+                            assert_never(unreachable)
+                case SubmissionTimeout():
+                    logger.warning("Status never arrived after 60 sec. Skipping.")
+                    make_new_code = False
+                    sessionStats.slowDownCount += 1
+                case SubmissionPending():
+                    logger.error("Submission remained pending unexpectedly. Please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue about this.")
+                    make_new_code = False
+                case _ as unreachable:
+                    assert_never(unreachable)
 
     except KeyboardInterrupt:
         logger.critical("Stopping the program on KeyboardInterrupt!")
