@@ -7,13 +7,10 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from src.lib.types import BrowserSession, Config
+from src.lib.types import Config
 
 
-def captcha_detection(session: BrowserSession) -> None:
-    driver: WebDriver = session.driver
-    config: Config = session.config
-
+def captcha_detection(driver: WebDriver, config: Config) -> None:
     captcha_box: tuple[ByType, str] = (By.CLASS_NAME, "container__8a031")
     wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
 
