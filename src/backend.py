@@ -35,6 +35,7 @@ from .lib.types import (
     Config,
     InvalidCode,
     NetworkOffline,
+    ProgramConfig,
     ProgramMode,
     RateLimited,
     ServiceUnavailable,
@@ -278,6 +279,68 @@ def wait_for_submission_result(
     return SubmissionTimeout()
 
 
+def _select_sleep_duration(rate_limited: bool, program: ProgramConfig) -> list[int]:
+    if not rate_limited:
+        return list(program.usualAttemptDelayRange)
+    else:
+        return list(program.ratelimitedAttemptDelayRange)
+
+
+def _add_attempt_to_session(code_mode: CodeMode, sessionStats: SessionStats) -> None:
+    match code_mode:
+        case CodeMode_Normal():
+            sessionStats.attemptedCodeCount += 1
+        case CodeMode_Backup():
+            sessionStats.attemptedBackupCodeCount += 1
+        case _:
+            raise ValueError(f"Unhandled CodeMode: {code_mode}")
+
+
+def _read_used_backup_codes_file() -> list[str]:
+    file_path = Path("secret/used_backup_codes.txt")
+    if not file_path.exists():
+        return []
+    return file_path.read_text(encoding="utf-8").splitlines()
+
+
+def _write_to_used_backup_codes_file(random_code: str) -> None:
+    with open("secret/used_backup_codes.txt", "a") as f:
+        f.write(f"{random_code}\n")
+
+
+def _check_if_code_was_tested(code_mode: CodeMode, generated_code: str, make_new_code: bool) -> str:
+    used_backup_codes: list[str] = _read_used_backup_codes_file()
+
+    if make_new_code:
+        while generated_code in used_backup_codes:
+            logger.warning(f"Backup code {generated_code} was already tested. Will generate another code.")
+            generated_code = generate_random_code(code_mode)
+        _write_to_used_backup_codes_file(generated_code)
+    else:
+        # If rate limiting occurs, do not generate a new code
+        if generated_code in used_backup_codes:
+            logger.warning(f"Backup code {generated_code} wasn't tested. Will test once the ratelimiting is over.")
+
+    return generated_code
+
+
+def _get_backup_code(code_mode: CodeMode, make_new_code: bool, generated_code: str) -> str:
+    if make_new_code:
+        generated_code = generate_random_code(code_mode)
+    return _check_if_code_was_tested(code_mode, generated_code, make_new_code)
+
+
+def _get_code_for_attempt(code_mode: CodeMode, make_new_code: bool, current_code: str) -> str:
+    """Gets the code for the current attempt."""
+    match code_mode:
+        case CodeMode_Normal():
+            return generate_random_code(code_mode)
+        case CodeMode_Backup():
+            return _get_backup_code(code_mode, make_new_code, current_code)
+        case _:
+            raise ValueError(f"Unhandled CodeMode: {code_mode}")
+
+
 def try_codes(session: BrowserSession) -> None:
     """Logic to continously enter TOTP/Backup codes"""
     driver: WebDriver = session.driver
@@ -295,9 +358,9 @@ def try_codes(session: BrowserSession) -> None:
     code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
     code_status_elt: tuple[ByType, str] = (By.CLASS_NAME, "error__7c901")
 
-    make_new_code: bool = False
+    make_new_code: bool = True
     rate_limited: bool = False
-    random_code: str = generate_random_code(config.program.codeMode)
+    random_code: str = ""
 
     logger.info("Starting a Forcer session")
     logger.debug("\n" + pformat(config.program))
@@ -306,31 +369,10 @@ def try_codes(session: BrowserSession) -> None:
     # Generate a new code.
     try:
         while True:
-            if not rate_limited:
-                sleep_duration_range = list(config.program.usualAttemptDelayRange)
-            else:
-                sleep_duration_range = list(config.program.ratelimitedAttemptDelayRange)
-                rate_limited = False
+            sleep_duration_range = _select_sleep_duration(rate_limited, config.program)
 
             # Use the gen'd backup code only if it's not in the used_backup_codes.txt list. Add the code to the list if I use it.
-            # the thing that really sucks here is even if a backup code is valid, by trying it here and logging in, I invalidate it. (backup codes expire on use)
-            if isinstance(config.program.codeMode, CodeMode_Backup):
-                if make_new_code:
-                    random_code = generate_random_code(config.program.codeMode)
-
-                with open("secret/used_backup_codes.txt", "a+") as f:
-                    f.seek(0)
-                    used_backup_codes: list[str] = f.read().splitlines()
-                    if random_code in used_backup_codes:
-                        if make_new_code:
-                            logger.warning(f"Backup code {random_code} is invalid. Possibly I previously used it, but now it's expired anyway.")
-                            random_code = generate_random_code(config.program.codeMode)
-                        else:  # If rate limiting occurs, do not generate a new code
-                            logger.warning(f"Backup code {random_code} wasn't tested. Will test once the ratelimiting is over.")
-                    else:
-                        f.write(f"{random_code}\n")
-            else:
-                random_code = generate_random_code(config.program.codeMode)
+            random_code = _get_code_for_attempt(config.program.codeMode, make_new_code, random_code)
 
             # Attempt the code
             try:
@@ -340,10 +382,8 @@ def try_codes(session: BrowserSession) -> None:
                 time.sleep(secrets.choice(sleep_duration_range))
                 submit_button_element = user_wait_longer.until(EC.element_to_be_clickable(submit_button))
                 submit_button_element.click()
-                if isinstance(config.program.codeMode, CodeMode_Backup):
-                    sessionStats.attemptedBackupCodeCount += 1
-                else:
-                    sessionStats.attemptedCodeCount += 1
+                _add_attempt_to_session(config.program.codeMode, sessionStats)
+
             except TimeoutException as element_isnt_clickable:
                 logger.warning(f"Element isn't clickable yet after {config.program.elementLoadTolerance * 3} sec. You may be on a slow network or ratelimited.")
                 sessionStats.slowDownCount += 1
@@ -374,11 +414,14 @@ def try_codes(session: BrowserSession) -> None:
                         case InvalidCode(attempted_code=code, raw_message=msg):
                             logger.warning(f"{msg}: {code}")
                             make_new_code = True
+                            rate_limited = False
+
                         case RateLimited(raw_message=msg):
                             logger.warning(msg)
                             sessionStats.ratelimitCount += 1
                             make_new_code = False
                             rate_limited = True
+
                         case TokenExpired(raw_message=msg):
                             logger.critical(f"{msg}: The reset token has expired. Please create a new reset token and update it in config/account.yml")
                             sys.exit()
@@ -386,21 +429,27 @@ def try_codes(session: BrowserSession) -> None:
                             logger.warning(f"{msg}: The service is unavailable, Discord is probably under maintenance.")
                             sessionStats.serviceUnavailableCount += 1
                             make_new_code = False
+                            rate_limited = False
                         case NetworkOffline(raw_message=msg):
                             logger.error("Network disconnection detected. Trying again in 15 seconds...")
                             time.sleep(15)
                             make_new_code = False
+                            rate_limited = False
                         case UnknownError(raw_message=msg):
                             logger.error(f"Encountered unimplemented status message. Tell the developers about this: {msg}")
+                            make_new_code = False
+                            rate_limited = False
                         case _ as unreachable:
                             assert_never(unreachable)
                 case SubmissionTimeout():
                     logger.warning("Status never arrived after 60 sec. Skipping.")
                     make_new_code = False
+                    rate_limited = False
                     sessionStats.slowDownCount += 1
                 case SubmissionPending():
                     logger.error("Submission remained pending unexpectedly. Please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue about this.")
                     make_new_code = False
+                    rate_limited = False
                 case _ as unreachable:
                     assert_never(unreachable)
 
