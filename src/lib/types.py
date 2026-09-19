@@ -8,8 +8,6 @@ from selenium.webdriver.common.by import By, ByType
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 
-from src.auth.code_errors import get_code_status
-
 """
 This is the canonical definition for program and account configuration. all possibilities defined here
 
@@ -235,6 +233,7 @@ class CheckSubmissionResult:
 
     def check(self, driver: WebDriver) -> SubmissionResult:
         """Determines whether the submission succeeded, failed, or is still pending."""
+        from src.auth.code_errors import get_code_status
 
         if self.login.check(driver):
             return SubmissionSuccess()
