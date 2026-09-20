@@ -8,3 +8,7 @@ class CodeFieldNotFound(Exception):
 
 class UnhandledCodeModeException(Exception):
     pass
+
+
+class CredentialsFieldNotFound(Exception):
+    pass
