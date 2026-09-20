@@ -4,3 +4,7 @@ class InvalidCredentialError(Exception):
 
 class CodeFieldNotFound(Exception):
     pass
+
+
+class UnhandledCodeModeException(Exception):
+    pass
