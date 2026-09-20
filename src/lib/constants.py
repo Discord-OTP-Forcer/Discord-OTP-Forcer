@@ -3,7 +3,7 @@ from typing import Final
 
 from selenium.webdriver.common.by import By, ByType
 
-_SCRIPTS_DIR: Final[Path] = Path(__file__).parent / "lib/js_scripts"
+_SCRIPTS_DIR: Final[Path] = Path(__file__).parent / "js_scripts"
 
 HARDEN_WEB_STORAGE_JS: Final[str] = (_SCRIPTS_DIR / "HardenWebStorage.js").read_text(encoding="utf-8")
 AUTH_ERROR_INTERCEPTOR_JS: Final[str] = (_SCRIPTS_DIR / "AuthErrorInterceptor.js").read_text(encoding="utf-8")
