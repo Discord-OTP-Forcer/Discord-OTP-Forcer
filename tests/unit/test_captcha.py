@@ -68,7 +68,7 @@ class TestCaptchaPresent:
             [],
         ]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         assert mock_driver.find_elements.call_count == 4, "Expected find_elements to be called exactly 4 times"
 
@@ -80,7 +80,7 @@ class TestCaptchaPresent:
         """Should call time.sleep exactly once for each time the captcha is detected"""
         mock_driver.find_elements.side_effect = [["captcha"], ["captcha"], []]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         assert self.sleep_mock.call_count == 2, "Expected time.sleep to be called exactly 2 times"
 
@@ -92,7 +92,7 @@ class TestCaptchaPresent:
         """Should pause the execution for exactly 1 second during the polling cycle"""
         mock_driver.find_elements.side_effect = [["captcha"], []]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         self.sleep_mock.assert_called_with(1)
 
@@ -104,7 +104,7 @@ class TestCaptchaPresent:
         """Should search for the captcha by class name using the expected CSS selector"""
         mock_driver.find_elements.side_effect = [["captcha"], []]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         mock_driver.find_elements.assert_any_call("class name", "container__8a031")
 
@@ -116,7 +116,7 @@ class TestCaptchaPresent:
         """Should call find_elements only once when the captcha is already gone on the first check"""
         mock_driver.find_elements.side_effect = [[]]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         assert mock_driver.find_elements.call_count == 1, "Expected find_elements to be called exactly 1 times"
 
@@ -128,7 +128,7 @@ class TestCaptchaPresent:
         """Should not sleep if the while loop exits on its first evaluation"""
         mock_driver.find_elements.side_effect = [[]]
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         self.sleep_mock.assert_not_called()
 
@@ -140,7 +140,7 @@ class TestCaptchaPresent:
         """Should always return None. Callers do not handle any return value"""
         mock_driver.find_elements.side_effect = [["captcha"], []]
 
-        result = captcha_detection(browser_session)
+        result = captcha_detection(browser_session.driver, browser_session.config)
 
         assert result is None
 
@@ -171,7 +171,7 @@ class TestNoCaptcha:
         mock_driver: MagicMock,
     ):
         """Should never enter the polling loop when TimeoutException is raised"""
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         mock_driver.find_elements.assert_not_called()
 
@@ -183,7 +183,7 @@ class TestNoCaptcha:
         """Should forward elementLoadTolerance from config as the WebDriverWait timeout"""
         mock_config.program.elementLoadTolerance = 10.0
 
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         self.wait_mock.assert_called_once_with(browser_session.driver, 10.0)
 
@@ -193,7 +193,7 @@ class TestNoCaptcha:
         mock_driver: MagicMock,
     ):
         """Should pass the session's driver instance to WebDriverWait"""
-        captcha_detection(browser_session)
+        captcha_detection(browser_session.driver, browser_session.config)
 
         actual_driver = self.wait_mock.call_args[0][0]
         assert actual_driver is mock_driver
@@ -209,7 +209,7 @@ class TestNoCaptcha:
         ec_mock = ec_patcher.start()
 
         try:
-            captcha_detection(browser_session)
+            captcha_detection(browser_session.driver, browser_session.config)
             ec_mock.assert_called_once_with(expected_locator)
         finally:
             ec_patcher.stop()
@@ -219,6 +219,6 @@ class TestNoCaptcha:
         browser_session: BrowserSession,
     ):
         """Should always return None. Callers do not handle any return value"""
-        result = captcha_detection(browser_session)
+        result = captcha_detection(browser_session.driver, browser_session.config)
 
         assert result is None
