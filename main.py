@@ -21,11 +21,10 @@ if __name__ == "__main__":
     try:
         session = bootstrap_browser(config)
         if config.account.authToken:
-            login_with_discord_auth_token(session, TokenFound(raw=CensoredStr(config.account.authToken)))
+            login_with_discord_auth_token(session, TokenFound(token=CensoredStr(config.account.authToken)))
         else:
             session = bootstrap_code_page(session)
             try_codes(session)
-
     except Exception as error:
         if config.program.logLevel in ("SENSITIVE", "DEBUG"):
             import stackprinter
