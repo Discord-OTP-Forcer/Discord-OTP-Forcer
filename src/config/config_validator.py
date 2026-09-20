@@ -40,6 +40,7 @@ EXPECTED_PROGRAM_FIELDS: frozenset[str] = frozenset(
 )
 
 _EXPECTED_ACCOUNT_FIELDS: frozenset[str] = frozenset({"email", "password", "newPassword", "resetToken", "authToken"})
+_INVALID_TOKEN_PREFIXES: frozenset[str] = frozenset({"https://", "http://", "discord.com", "#token="})
 
 
 def _read_yaml_file(path: str, ref: FileRef) -> FileReadResult:
@@ -215,6 +216,57 @@ def _validate_account_field(path: str, lines: Sequence[str], parsed: dict, key: 
     return ValidationOk()
 
 
+def _validate_password_length(path: str, lines: Sequence[str], parsed: dict, key: str) -> ValidationResult:
+    """Checks that the password is at least 8 characters long."""
+    min_length: int = 8
+    val = parsed.get(key)
+
+    if _is_empty(val):
+        return ValidationOk()
+
+    if isinstance(val, str) and len(val) < min_length:
+        return ValidationError(f"'{path}'{_location(lines, key)}: '{key}' must be at least {min_length} characters long.")
+    return ValidationOk()
+
+
+def _validate_password_complexity(path: str, lines: Sequence[str], parsed: dict, key: str) -> ValidationResult:
+    """
+    Checks that the password includes at least 3 of 4 character types:
+    uppercase, lowercase, numbers, and symbols.
+    """
+    val = parsed.get(key)
+
+    if _is_empty(val) or not isinstance(val, str):
+        return ValidationOk()
+
+    has_upper = bool(re.search(r"[A-Z]", val))
+    has_lower = bool(re.search(r"[a-z]", val))
+    has_digit = bool(re.search(r"[0-9]", val))
+    has_symbol = bool(re.search(r"[^A-Za-z0-9]", val))
+
+    types_count = sum([has_upper, has_lower, has_digit, has_symbol])
+    if types_count < 3:
+        return ValidationError(f"'{path}'{_location(lines, key)}: '{key}' must include 3 of these 4 character types: uppercase, lowercase, number and symbols.")
+    return ValidationOk()
+
+
+def _validate_reset_token(path: str, lines: Sequence[str], parsed: dict, key: str) -> ValidationResult:
+    """
+    Checks if resetToken contains a full URL instead of just the token.
+    The user must provide only the raw token string without the full URL path.
+    """
+    val = parsed.get(key)
+
+    if _is_empty(val):
+        return ValidationOk()
+
+    if isinstance(val, str):
+        clean_val = val.strip()
+        if any(prefix in clean_val for prefix in _INVALID_TOKEN_PREFIXES):
+            return ValidationError(f"'{path}'{_location(lines, key)}: '{key}' must be the token only, not the full URL. Use the value after '#token='.")
+    return ValidationOk()
+
+
 def validate_program_config(path: str) -> None:
     """
     Validate the program configuration file.
@@ -301,6 +353,9 @@ def validate_account_config(path: str, program_mode: ProgramMode) -> None:
             field_results = [
                 _validate_account_field(path, raw_lines, parsed_yaml, "resetToken", "A reset token", program_mode.name),
                 _validate_account_field(path, raw_lines, parsed_yaml, "newPassword", "A new password", program_mode.name),
+                _validate_reset_token(path, raw_lines, parsed_yaml, "resetToken"),
+                _validate_password_length(path, raw_lines, parsed_yaml, "newPassword"),
+                _validate_password_complexity(path, raw_lines, parsed_yaml, "newPassword"),
             ]
         case _ as unreachable:
             assert_never(unreachable)
