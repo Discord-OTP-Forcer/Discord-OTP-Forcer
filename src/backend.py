@@ -4,7 +4,7 @@ import sys
 import time
 from pathlib import Path
 from pprint import pformat
-from typing import Final, assert_never
+from typing import assert_never
 
 from loguru import logger
 from selenium.common.exceptions import TimeoutException
@@ -22,7 +22,17 @@ from .auth.captcha import captcha_detection
 from .auth.code_errors import parse_code_error
 from .auth.token_extraction import extract_token
 from .lib.codegen import generate_random_code
-from .lib.exceptions import InvalidCredentialError
+from .lib.constants import (
+    AUTH_ERROR_INTERCEPTOR_JS,
+    BACKUP_CODE_FIELD,
+    CODE_STATUS_ELT_CLASS,
+    HARDEN_WEB_STORAGE_JS,
+    IS_A_BUG_STRING,
+    LOW_ELEMENT_LOAD_TOLERANCE_STRING,
+    NORMAL_CODE_FIELD,
+    NORMAL_CODE_FIELD_FALLBACK,
+)
+from .lib.exceptions import CodeFieldNotFound, CredentialsFieldNotFound, InvalidCredentialError, UnhandledCodeModeException
 from .lib.types import (
     BinaryPath,
     Browser,
@@ -52,8 +62,6 @@ from .lib.types import (
     UnknownError,
 )
 
-_IS_A_BUG_STRING: Final[str] = "If you think this is a bug, please go to codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new and create an issue."
-
 logger.level(name="SENSITIVE", no=15, color="<m><b>")
 
 
@@ -79,8 +87,6 @@ def bootstrap_browser(config: Config) -> BrowserSession:
 
     match config.program.browser:
         case Browser.Chrome | Browser.Brave | Browser.Chromium | Browser.Thorium:
-            _HARDEN_WEB_STORAGE_JS: Final[str] = (Path(__file__).parent / "lib/js_scripts" / "HardenWebStorage.js").read_text(encoding="utf-8")
-
             driver = Driver(
                 browser="chrome" if config.program.browser in (Browser.Chromium, Browser.Thorium) else config.program.browser,
                 uc=True,
@@ -108,9 +114,15 @@ def bootstrap_browser(config: Config) -> BrowserSession:
 
             driver.execute_cdp_cmd(
                 "Page.addScriptToEvaluateOnNewDocument",
-                {"source": _HARDEN_WEB_STORAGE_JS},
+                {"source": HARDEN_WEB_STORAGE_JS},
             )
-            logger.debug("Fixed compatibility polyfill")
+            logger.debug("Hardened local web storage")
+
+            driver.execute_cdp_cmd(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {"source": AUTH_ERROR_INTERCEPTOR_JS},
+            )
+            logger.debug("Installed auth api interceptor")
         case _ as unreachable:
             assert_never(unreachable)
 
@@ -132,53 +144,59 @@ def _get_landing_url(program_mode: ProgramMode, reset_token: str) -> str:
 def _get_code_field(code_mode: CodeMode) -> tuple[ByType, str]:
     match code_mode:
         case CodeMode_Backup():
-            return (By.XPATH, "//*[@label='Enter Discord Backup Code']")
+            return BACKUP_CODE_FIELD
         case CodeMode_Normal():
-            return (By.XPATH, "//*[@label='Enter Discord Auth Code']")
+            return NORMAL_CODE_FIELD
         case _:
-            raise ValueError(f"Unhandled CodeMode: {code_mode}")
+            raise UnhandledCodeModeException(f"Unhandled code mode: {code_mode}")
 
 
-def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
-    """
-    This sets up the code entry page.
-    """
-    driver: WebDriver = session.driver
-    config: Config = session.config
+def _is_error_or_2fa_present(driver: WebDriver) -> bool:
+    """Checks if Discord's API returned an error or if 2FA elements have appeared."""
+    if driver.execute_script("return window.__authError;"):
+        return True
+    if driver.find_elements(By.XPATH, "//*[contains(text(), 'Verify with something else')]"):
+        return True
+    if driver.find_elements(*NORMAL_CODE_FIELD) or driver.find_elements(*NORMAL_CODE_FIELD_FALLBACK):
+        return True
+    return bool(driver.find_elements(*BACKUP_CODE_FIELD))
+
+
+def _wait_for_auth_response_or_2fa(driver: WebDriver) -> None:
+    """Wait 2 seconds for either an API error or 2FA elements to appear after submitting credentials."""
+    try:
+        short_wait: WebDriverWait[WebDriver] = WebDriverWait(driver, 2)
+        short_wait.until(_is_error_or_2fa_present)
+    except TimeoutException:
+        pass
+
+
+def _verify_credentials(driver: WebDriver, programMode: ProgramMode) -> None:
+    """Check if Discord's API returned an error during login or reset."""
+
+    _wait_for_auth_response_or_2fa(driver)
+
+    if not driver.execute_script("return window.__authError;"):
+        return
+
+    err: str
+    match programMode:
+        case ProgramMode.Reset:
+            err = "Your password reset token is invalid or it may have expired. Generate a new one and fill it in your config/account.yml file. See discord-otp-forcer.codeberg.page/en/user/setup/#how-to-get-your-reset-token for more information."
+        case ProgramMode.Login:
+            err = "Your login credentials are invalid. Please check again if you typed it correctly."
+        case _ as unreachable:
+            assert_never(unreachable)
+
+    logger.critical(err)
+    raise InvalidCredentialError(err)
+
+
+def _select_2fa_method(driver: WebDriver, config: Config) -> None:
+    """Selects the 2FA method on the 2FA screen."""
+
     wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
     wait_longer: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance * 2)
-
-    # Go to the appropriate starting page for the mode
-    landing_url: str = _get_landing_url(config.program.programMode, config.account.resetToken)
-
-    driver.get(landing_url)
-    logger.debug(f"Gone to {config.program.programMode.name} page")
-
-    # Log-in with credentials
-    password_field: tuple[ByType, str] = (By.NAME, "password")
-    email_field: tuple[ByType, str] = (By.NAME, "email")
-    try:
-        match config.program.programMode:
-            case ProgramMode.Login:
-                wait.until(EC.presence_of_element_located(email_field)).send_keys(config.account.email)
-                wait.until(EC.presence_of_element_located(password_field)).send_keys(config.account.password)
-            case ProgramMode.Reset:
-                wait.until(EC.presence_of_element_located(password_field)).send_keys(config.account.newPassword)
-            case _ as unreachable:
-                assert_never(unreachable)
-        wait.until(EC.presence_of_element_located(password_field)).send_keys(Keys.RETURN)
-    except TimeoutException as email_or_password_field_not_located:
-        logger.critical(
-            "Could not locate the email or password field on the page."
-            "This may be caused by a low 'elementLoadTolerance' value in your config/program.yml file."
-            "Try increasing it to 5 or 7. (Or even higher if your internet connection or computer is slow.)"
-        )
-        logger.critical("If that does not fix the issue, please create a new issue at codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new to ask for help.")
-        sys.exit(1)
-
-    logger.debug("Found and filled in basic login fields")
-
-    captcha_detection(session)
 
     # Select the method
     try:
@@ -195,26 +213,24 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
         except TimeoutException:
             match config.program.codeMode:
                 case CodeMode_Backup():
-                    logger.critical("Cannot use Backup mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
+                    logger.critical("Cannot use Backup mode - you likely have no backup codes left. ", IS_A_BUG_STRING)
                 case CodeMode_Normal():
-                    logger.critical("Cannot use Normal mode - it's likely that you DO NOT have an authenticator app linked to your Discord account. ", _IS_A_BUG_STRING)
+                    logger.critical("Cannot use Normal mode - it's likely that you DO NOT have an authenticator app linked to your Discord account. ", IS_A_BUG_STRING)
                 case _:
-                    logger.critical("Cannot use Backup mode with regex mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
+                    logger.critical("Cannot use Backup mode with regex mode - you likely have no backup codes left. ", IS_A_BUG_STRING)
             sys.exit(1)
     except TimeoutException as only_normal_code_mode_found:
         logger.debug("Only found one TOTP method, proceeding with it")
         match config.program.codeMode:
             case CodeMode_Backup():
-                logger.critical("Cannot use backup mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
+                logger.critical("Cannot use backup mode - you likely have no backup codes left. ", IS_A_BUG_STRING)
                 sys.exit(1)
             case CodeMode_Normal():
                 try:
-                    # TODO: maybe do this a little better later
-                    code_field_6_digit: tuple[ByType, str] = (By.XPATH, "//*[@placeholder='6-digit authentication code']")
-                    wait.until(EC.presence_of_element_located(code_field_6_digit))
+                    wait.until(EC.presence_of_element_located(NORMAL_CODE_FIELD_FALLBACK))
                     logger.debug("Code field with '6-digit authentication code' placeholder found, no need to select mode")
                 except TimeoutException:
-                    # TODO: Need to document or test more this
+                    # TODO: Need to test more why this could happen
                     logger.critical(
                         "Cannot use normal mode - Unknown error on exception 'only_normal_code_mode_found'. "
                         "Please report this by creating an issue at codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/issues/new "
@@ -222,26 +238,65 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
                     )
                     sys.exit(1)
             case _:
-                logger.critical("Cannot use backup mode with regex mode - you likely have no backup codes left. ", _IS_A_BUG_STRING)
+                logger.critical("Cannot use backup mode with regex mode - you likely have no backup codes left. ", IS_A_BUG_STRING)
                 sys.exit(1)
 
-    # Check if the code field exists
+
+def _check_if_code_field_exists(driver: WebDriver, config: Config) -> None:
+    """Checks if the code entry field exists on the page."""
+
+    wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
+
     try:
-        # TODO: detect when this code field is not found correctly
-        code_field: tuple[ByType, str] = (By.CLASS_NAME, "input__75098")
+        code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
         wait.until(EC.presence_of_element_located(code_field))
     except TimeoutException:
-        msg: str
-        # TODO: And only show this error messages when it actually can't log in on the account / the password reset token IS expired
+        msg: str = f"Could not locate the code field on the page. {LOW_ELEMENT_LOAD_TOLERANCE_STRING}"
+        logger.critical(msg)
+        raise CodeFieldNotFound(msg)
+
+
+def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
+    """
+    This sets up the code entry page.
+    """
+    driver: WebDriver = session.driver
+    config: Config = session.config
+    wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
+
+    # Go to the appropriate starting page for the mode
+    landing_url: str = _get_landing_url(config.program.programMode, config.account.resetToken)
+
+    driver.get(landing_url)
+    logger.debug(f"Gone to {config.program.programMode.name} page")
+
+    # Log-in with credentials
+    password_field: tuple[ByType, str] = (By.NAME, "password")
+    try:
         match config.program.programMode:
             case ProgramMode.Login:
-                msg = "Could not log in to your account. Is your email and password correct? You may have to reset your password. Check the wiki/docs at discord-otp-forcer.codeberg.page/en/user/setup for more information."
-                logger.critical(msg)
-                raise InvalidCredentialError(msg)
+                email_field: tuple[ByType, str] = (By.NAME, "email")
+                wait.until(EC.presence_of_element_located(email_field)).send_keys(config.account.email)
+                wait.until(EC.presence_of_element_located(password_field)).send_keys(config.account.password)
             case ProgramMode.Reset:
-                msg = "Your password reset token may have expired. Generate a new one and fill it in your config/account.yml file. See discord-otp-forcer.codeberg.page/en/user/setup/#how-to-get-your-reset-token for more information."
-                logger.critical(msg)
-                raise InvalidCredentialError(msg)
+                wait.until(EC.presence_of_element_located(password_field)).send_keys(config.account.newPassword)
+            case _ as unreachable:
+                assert_never(unreachable)
+        wait.until(EC.presence_of_element_located(password_field)).send_keys(Keys.RETURN)
+    except TimeoutException as email_or_password_field_not_located:
+        msg: str = f"Could not locate the email or password field on the page. {LOW_ELEMENT_LOAD_TOLERANCE_STRING}"
+        logger.critical(msg)
+        raise CredentialsFieldNotFound(msg)
+
+    logger.debug("Found and filled in basic login fields")
+
+    captcha_detection(driver, config)
+
+    _verify_credentials(driver, config.program.programMode)
+
+    _select_2fa_method(driver, config)
+
+    _check_if_code_field_exists(driver, config)
 
     return session
 
@@ -356,7 +411,7 @@ def try_codes(session: BrowserSession) -> None:
 
     submit_button: tuple[ByType, str] = (By.XPATH, "//*[@type='submit']")
     code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
-    code_status_elt: tuple[ByType, str] = (By.CLASS_NAME, "error__7c901")
+    code_status_elt: tuple[ByType, str] = CODE_STATUS_ELT_CLASS
 
     make_new_code: bool = True
     rate_limited: bool = False
