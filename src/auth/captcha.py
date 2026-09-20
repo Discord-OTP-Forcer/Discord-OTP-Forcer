@@ -2,16 +2,17 @@ import time
 
 from loguru import logger
 from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.common.by import By, ByType
+from selenium.webdriver.common.by import ByType
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from src.lib.constants import CAPTCHA_CONTAINER_CLASS
 from src.lib.types import Config
 
 
 def captcha_detection(driver: WebDriver, config: Config) -> None:
-    captcha_box: tuple[ByType, str] = (By.CLASS_NAME, "container__8a031")
+    captcha_box: tuple[ByType, str] = CAPTCHA_CONTAINER_CLASS
     wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
 
     try:

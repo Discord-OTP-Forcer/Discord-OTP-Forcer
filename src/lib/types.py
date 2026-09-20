@@ -4,9 +4,11 @@ from enum import Enum, StrEnum
 from pathlib import Path
 from typing import NewType, TypedDict, assert_never
 
-from selenium.webdriver.common.by import By, ByType
+from selenium.webdriver.common.by import ByType
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
+
+from src.lib.constants import HOMEPAGE_CLASS
 
 """
 This is the canonical definition for program and account configuration. all possibilities defined here
@@ -211,7 +213,7 @@ SubmissionResult = SubmissionSuccess | SubmissionError | SubmissionTimeout | Sub
 class CheckLoginSuccess:
     """Callable condition that checks if the program has successfully logged in."""
 
-    homepage: tuple[ByType, str] = (By.CLASS_NAME, "app__160d8")
+    homepage: tuple[ByType, str] = HOMEPAGE_CLASS
 
     def check(self, driver: WebDriver) -> bool:
         """Default check."""

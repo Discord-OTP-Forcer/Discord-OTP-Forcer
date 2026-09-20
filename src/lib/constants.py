@@ -13,3 +13,7 @@ IS_A_BUG_STRING: Final[str] = "If you think this is a bug, please go to codeberg
 BACKUP_CODE_FIELD: Final[tuple[ByType, str]] = (By.XPATH, "//*[@label='Enter Discord Backup Code']")
 NORMAL_CODE_FIELD: Final[tuple[ByType, str]] = (By.XPATH, "//*[@label='Enter Discord Auth Code']")
 NORMAL_CODE_FIELD_FALLBACK: Final[tuple[ByType, str]] = (By.XPATH, "//*[@placeholder='6-digit authentication code']")
+
+CAPTCHA_CONTAINER_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "container__8a031")
+CODE_STATUS_ELT_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "error__7c901")
+HOMEPAGE_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "app__160d8")
