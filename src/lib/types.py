@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import ByType
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 
-from src.lib.constants import HOMEPAGE_CLASS
+from src.lib.constants import CODE_STATUS_ELT_CLASS, HOMEPAGE_CLASS
 
 """
 This is the canonical definition for program and account configuration. all possibilities defined here
@@ -228,9 +228,9 @@ class CheckLoginSuccess:
 class CheckSubmissionResult:
     """Callable condition that checks the outcome of a code submission."""
 
-    code_status_elt: tuple[ByType, str]
     wait: WebDriverWait[WebDriver]
 
+    code_status_elt: tuple[ByType, str] = CODE_STATUS_ELT_CLASS
     login: CheckLoginSuccess = CheckLoginSuccess()
 
     def check(self, driver: WebDriver) -> SubmissionResult:

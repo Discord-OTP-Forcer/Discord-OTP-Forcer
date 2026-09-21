@@ -301,19 +301,13 @@ def bootstrap_code_page(session: BrowserSession) -> BrowserSession:
     return session
 
 
-def wait_for_submission_result(
-    driver: WebDriver,
-    code_status_elt: tuple[ByType, str],
-) -> SubmissionResult:
+def wait_for_submission_result(driver: WebDriver) -> SubmissionResult:
     """Polls the submission result of a generated code."""
 
     wait: WebDriverWait[WebDriver] = WebDriverWait(driver, 0.5)
     warned_taking_long: bool = False
 
-    condition: CheckSubmissionResult = CheckSubmissionResult(
-        code_status_elt=code_status_elt,
-        wait=wait,
-    )
+    condition: CheckSubmissionResult = CheckSubmissionResult(wait)
 
     timer: Stopwatch = Stopwatch()
 
@@ -446,10 +440,7 @@ def try_codes(session: BrowserSession) -> None:
                 continue
 
             # Success check. Break out if it succeeded.
-            submission_result: SubmissionResult = wait_for_submission_result(
-                driver=driver,
-                code_status_elt=code_status_elt,
-            )
+            submission_result: SubmissionResult = wait_for_submission_result(driver)
 
             match submission_result:
                 case SubmissionSuccess():
