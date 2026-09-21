@@ -101,8 +101,8 @@ class TestGetCodeStatusFallback:
 
     @pytest.fixture(autouse=True)
     def setup(self, mock_driver: MagicMock, mock_wait: MagicMock):
-        """Configure wait timeout and mock element response for fallback testing."""
-        mock_wait.until.side_effect = TimeoutException()
+        """Configure element not found and mock element response for fallback testing."""
+        mock_wait.until.side_effect = NoSuchElementException()
         mock_driver.find_element.return_value.text = "Invalid two-factor code"
 
     def test_returns_code_status_found(
@@ -144,6 +144,20 @@ class TestGetCodeStatusFallback:
         # Checks that find_element used the XPATH strategy
         assert args[0][0] == By.XPATH
 
+    def test_timeout_returns_code_status_not_found(
+        self,
+        mock_driver: MagicMock,
+        mock_wait: MagicMock,
+        code_status_element: tuple[ByType, str],
+    ):
+        """Should return CodeStatusNotFound and not trigger fallback on TimeoutException"""
+        mock_wait.until.side_effect = TimeoutException()
+
+        result = get_code_status(mock_driver, mock_wait, code_status_element)
+
+        assert isinstance(result, CodeStatusNotFound)
+        mock_driver.find_element.assert_not_called()
+
     def test_falls_through_on_no_such_element(
         self,
         mock_driver: MagicMock,
@@ -183,7 +197,7 @@ class TestGetCodeStatusNotFound:
         code_status_element: tuple[ByType, str],
     ):
         """Should return CodeStatusNotFound when all lookups fail"""
-        mock_wait.until.side_effect = TimeoutException()
+        mock_wait.until.side_effect = NoSuchElementException()
         mock_driver.find_element.side_effect = NoSuchElementException()
 
         result = get_code_status(mock_driver, mock_wait, code_status_element)
