@@ -19,13 +19,13 @@ password: ""
 # Password Reset Info
 #
 # To get your token it will be in the url of the password reset page.
-# Follow the instructions in the README.md on how to obtain this token
+# Follow the instructions in the wiki or on the documentation site on how to obtain this token
 
 newPassword: ""
 resetToken: ""
 
 # Auth Token Info
 #
-# When you get or have your discord Auth token, you can paste it
-# here and this program will login on your account.
+# When you get or have your Discord Auth token, you can paste it
+# here and this program will login to your account.
 authToken: ""

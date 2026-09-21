@@ -1,9 +1,9 @@
 # All config validation/parsing logic lives in main.py
 # All valid options live in src.lib.types.py
 # If an option is invalid you should input it exactly like how it appears below in the comments or in the src.lib.types.py file.
-# Note: put a space after the `:` for all the config options or else the config format will be wrong.
+# Note: put a space after the `:` for all the config options, otherwise the config format will be invalid and the forcer will not start.
 
-# Program mode configuration. Login is for normal login, Reset is for when you want/need to reset your password and then Force codes, e.g Discord forces you to reset the password.
+# Program mode configuration. Login is for normal login and Reset is for when you want/need to reset your password and then force codes, for example, if Discord forces you to reset your password.
 # Valid Modes:
 # Login, Reset
 programMode: 
@@ -28,7 +28,7 @@ browser:
 # If True, this option redacts sensitive log info.
 # If False, this option reveals sensitive log info like your password, resetToken and email address.
 # Unless you know what you're doing you should probably keep this at True.
-# If the logLevel is higher than DEBUG or SENSITIVE_DEBUG, this will have no effect as credentials wouldn't be printed in those levels.
+# If the logLevel is higher than DEBUG or SENSITIVE_DEBUG, this will have no effect as credentials aren't printed in those levels.
 # Valid Options:
 # True, False
 # Default: True
@@ -42,13 +42,13 @@ logCreation: False
 
 # Enable the update checker.
 # If True, fetches pyproject.toml from codeberg.org to check for updates.
-# If False, the program does not make this network request.
+# If False, the program does not make this network request to check for updates (no checking for updates).
 # Valid Options:
 # True, False
 # Default: True
 checkUpdates: True
 
-# Enable headless mode (no browser gui spawned). Very untested and unrecommended unless you set logCreation = True and save the account token. TODO:save the account token.
+# Enable headless mode (no browser GUI spawned). Very untested and not recommended unless you set logCreation = True and save the account token. TODO:save the account token.
 # Valid Options:
 # True, False
 # Default: False
@@ -60,28 +60,28 @@ headless: False
 # Default: INFO
 logLevel: INFO
 
-# The maximum amount of seconds to wait for a HTML element (e.g password entry field, code submission button) to load in before crashing.
+# The maximum amount of seconds to wait for a HTML element (e.g., password entry field or code submission button) to load in before crashing.
 # If the element is found before the time elapses, it works as normal and doesn't crash.
 # If the element is not found though, it will usually either trigger various internal points in the code that automatically handles it (or will crash if we really need the element).
-# Refer https://www.selenium.dev/documentation/webdriver/waits/ "Implicit Wait" section here for how it works.
-# This is in seconds unit and can take a float value.
-# Default: 3
-elementLoadTolerance: 3
+# Refer to https://www.selenium.dev/documentation/webdriver/waits/#implicit-waits to understand how it works.
+# This is in seconds and can take a float value.
+# Default: 4
+elementLoadTolerance: 4
 
 # Set the range for the minimum and maximum "amount of seconds" to wait after attempting a code.
-# This is so we don't unnecessarily tax Discord's infrastructure by spamming them.
-# Please do not lower the min-bound any more than "6", from testing.
-# The range this takes is in the form [min, max)
-# This is in seconds unit and takes only integer value.
+# This is so we don't unnecessarily tax Discord's infrastructure by spamming code submissions.
+# Please do not lower the min-bound any more than "6" from testing.
+# The range this takes is in the form [min, max]
+# This is in seconds unit and only takes integer values.
 # Default: Min: 6, Max: 8
 usualAttemptDelayMin: 6
 usualAttemptDelayMax: 8
 
 # Set the range for the minimum and maximum "amount of seconds" to wait after attempting a code and getting rate-limited by Discord.
-# This is so we don't unnecessarily tax Discord's infrastructure by spamming them and don't trigger spam-detection blocks by giving them some time to recover.
-# Please do not lower the min-bound any more than "7" from testing. Lowering this might cause you to get temp or perma IP banned for repeated spam
-# The range this takes is in the form [min, max)
-# This is in seconds unit and takes only integer value.
-# Default: Min: 6, Max: 8
+# This is so we don't unnecessarily tax Discord's infrastructure by spamming code submissions and don't trigger spam-detection blocks by giving them some time to recover.
+# Please do not lower the min-bound any more than "7" from testing. Lowering this might cause you to get temp or perma IP banned for repeated spam.
+# The range this takes is in the form [min, max]
+# This is in seconds unit and only takes integer values.
+# Default: Min: 7, Max: 11
 ratelimitedAttemptDelayMin: 7
 ratelimitedAttemptDelayMax: 11

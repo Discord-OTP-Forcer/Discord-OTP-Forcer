@@ -32,7 +32,8 @@ for /d %%D in ("%ProgramFiles%\Python*") do (
 )
 
 echo Failed to find a Python installation. Make sure Python is installed in Local AppData or Program Files
-echo If you don't have it, you can download Python from: https://www.python.org/downloads/windows/ and click Latest Python 3 Release
+echo If you don't have it, you can download Python from https://www.python.org/downloads/windows/
+echo From there, click the 'Latest Python 3 Release' link
 choice /m "Would you like to open your browser to download it?"
   if errorlevel 2 goto failureEnd
   if errorlevel 1 (
