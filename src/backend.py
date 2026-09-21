@@ -107,6 +107,8 @@ def bootstrap_browser(config: Config) -> BrowserSession:
                         "a.nel.cloudflare.com/report",
                         "https://discord.com/api/v10/science",
                         "https://discord.com/api/v9/science",
+                        "https://discord.com/error-reporting-proxy/web",
+                        "https://discord.com/api/v9/metrics/v2",
                         "sentry.io",
                     ]
                 },

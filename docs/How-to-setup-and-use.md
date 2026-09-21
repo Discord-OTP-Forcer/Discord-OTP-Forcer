@@ -1,15 +1,11 @@
 > [!NOTE]
 > This wiki has been moved to a documentation website which should make it easier to follow. This wiki may not be as up to date or may even be removed at some point. It is recommended to go to the [new site](https://discord-otp-forcer.codeberg.page/en/user/setup/) instead.
 
-### Video Walkthorugh
-[Aglitar](https://github.com/Aglitar) made this video tutorial on how to use it. You can follow this if the instructions below or on the new documentation don't help you:
+### Video Walkthrough
+[Aglitar](https://github.com/Aglitar) made this video tutorial on how to use it. You can follow this along if the instructions below don't help you
 <br>
 https://www.youtube.com/watch?v=v4skgYVmvQg
 
-### Requirements
-- Python >= 3.13 (https://www.python.org/downloads)
-  - On Windows, make sure you tick 'Add to PATH' upon installing to prevent issues!
-- Google Chrome (https://www.google.com/chrome)
 ---
 ### Windows
 
@@ -23,12 +19,12 @@ https://www.youtube.com/watch?v=v4skgYVmvQg
       git clone https://codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer.git
       ```
 2. Go to the location you installed the repository and run `scripts/Windows/setup.cmd`.
-3. The requisite dependencies will install. After installation, the `config/account.yml` and `config/program.yml` files will open. Fill out the necessary details, then save the files and close Notepad. If you are ready to start a forcer session now, type `Y` at the prompt. A new window will open starting a forcer session.
+3. The requisite dependencies will install. After installation, the config/account.yml and config/program.yml files will open. Fill out the necessary details, then save the files and close Notepad. If you are ready to start a forcer session now, type Y at the prompt. A new window will open starting a forcer session.
 4. If you chose 'No' to starting a forcer session on the setup script, when you are ready, run `scripts/Windows/start.cmd` and follow the instructions in the command prompt. 
 5. An automated Google Chrome window will open. If and when the hCaptcha appears, complete it as normal.
 6. Wait for either a successful login, or a closed browser window (Failure to brute force codes). Go to the "Running the program" section for the main instructions.
 ---
-### macOS, Linux, other Non-Windows-based OS
+### macOS, Linux or any other non-Windows-based OS
 1. Clone/download the repository, and `cd` to it
 ```
 git clone https://codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer.git
@@ -52,11 +48,11 @@ python main.py
 ```
 7. An automated Google Chrome window will open. If and when the hCaptcha appears, complete it as normal.
 8. **Wait for either a successful login**, or a closed browser window (Failure to brute force codes)
-9. If it succeeds, **The program will PRINT YOUR ACCOUNT TOKEN TO CONSOLE**. Be warned and don't run this where someone else could access the log. **It will also save it to a file in `secret/token.txt`**. If there were multiple codes there, the latest, only-valid code is at the bottom of the file. Save this token 13 times safely and write it on a piece of paper.
-10. **do NOT log out, log in from a different device, or change account setting**. Under any circumstances or the token will be regenerated, making your currently obtained token invalid. Even if the browser closes, that's fine, the latest token will be active and usable to log-in. If you're logged in and secure on the browser though, you won't be signed out and will be able to use Discord like normal, so be very wary when doing this.
-11. In the program's browser window, or your own browser where **you can LOG IN to your account using that token** with this script: https://github.com/JHVIW/Discord-Token-Login-Script. Go to `discord.com/login`, open browser console, paste the script, fill in your account token where it says to, and wait for it to log-in.
-12. As soon as it logs in, **go to User Settings > My Account > Authenticator App > View Backup Codes**. Click it and enter your password, or your newPassword if you were in Reset mode. (Your password has succesfully been changed in this case.)
-13. It may ask you for an email/phone verification code. Check your account's registered mail for this and enter it.
+9. If it succeeds, **The program will PRINT YOUR ACCOUNT TOKEN TO CONSOLE**. Be warned and don't run this where someone else could access the log. **It will also save it to a file in `secret/token.txt`**.
+10. **Do not log out of discord.com on that browser window at all**. Even if the browser closes, that's fine. just **do NOT log out** under any circumstances or the token will be regenerated, making your currently obtained token invalid and the whole effort is lost.
+11. **You can LOG IN to your account using that token** with this script: https://github.com/JHVIW/Discord-Token-Login-Script. Go to `discord.com/login`, open browser console, paste the script, fill in your account token where it says to, and wait for it to log-in.
+12. As soon as it logs in, **go to User Settings > My Account > Authenticator App > View Backup Codes**. Click it and enter your password, or your newPassword if you were in Reset mode.
+13. It may ask you for an email verification code. Check your account's registered mail for this and enter it.
 14. **You'll see your account's backup codes. SAVE THEM.** SCREENSHOT THIS 15 TIMES AND SAVE 3 COPIES OF IT ON GOOGLE DRIVE, AND YOUR HARD DRIVE, YOUR PHONE, WRITTEN ON A PIECE OF PAPER, ETC.
 15. After having saved one of these backup codes, **click Remove Authenticator App** above and enter one of the backup codes you just obtained above.
 16. Now your account is liberated. Feel free to do whatever you want with it but remember to **save all details** you change.
@@ -83,7 +79,7 @@ If you plan on using the `Reset` mode you'll need to fill out the `newPassword` 
 ### How to get your token
 1. Go to https://discord.com/login and enter the email for the account and click forgot password.
 
-![plot](https://codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/raw/branch/main/docs/assets/passreset-token-instructions/readme(1).png)
+![plot](https://codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/raw/branch/main/docs/assets/passreset-token-instructions/readme%281%29.png)
 
 2. Find the password reset email and click reset password.
 
@@ -93,4 +89,5 @@ If you plan on using the `Reset` mode you'll need to fill out the `newPassword` 
 
 ![plot](https://codeberg.org/Discord-OTP-Forcer/Discord-OTP-Forcer/raw/branch/main/docs/assets/passreset-token-instructions/readme(3).png)
 
-_**You only need the part after `https://discord.com/reset#token=` the program will not work if you put the entire URL.**
+> [!NOTE]
+> _**You only need the part after `https://discord.com/reset#token=` the program will not work if you put the entire URL.**_
