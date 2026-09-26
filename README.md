@@ -32,7 +32,7 @@ There are also video tutorials for [Windows](https://www.youtube.com/watch?v=v4s
 
 ## Prerequisites
 - A Chromium-based browser (most mainstream ones are supported)
-- Python 3.13 or later
+- Python 3.11 or later
 - All the libraries in `dependencies.txt`/`pyproject.toml`
 
 ## Why did I make this?
