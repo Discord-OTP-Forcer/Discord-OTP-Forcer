@@ -379,7 +379,7 @@ wheels = [
 
 [[package]]
 name = "discord-otp-forcer"
-version = "0.6.0"
+version = "0.6.2"
 source = { virtual = "." }
 dependencies = [
     { name = "loguru" },
@@ -406,7 +406,7 @@ requires-dist = [
     { name = "pytest-mock", marker = "extra == 'testing'", specifier = "==3.15.1" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "regex-string-generator", specifier = "==0.1.0" },
-    { name = "seleniumbase", specifier = "==4.54.10" },
+    { name = "seleniumbase", specifier = "==4.54.12" },
     { name = "stackprinter", specifier = "==0.2.13" },
 ]
 provides-extras = ["testing"]
@@ -455,11 +455,11 @@ wheels = [
 
 [[package]]
 name = "filelock"
-version = "4.0.1"
+version = "4.0.4"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6f/38/88cd6eda96c40594a1e3da7d8b40f04bc40ace5a6aef9ac5cb407540f173/filelock-4.0.1.tar.gz", hash = "sha256:fdefc3f3e87716d855ae2b732c1cfd521dd99799ef2b4d00e8c0d4dcdc7cc94b", size = 238888, upload-time = "2026-09-19T01:08:15.958Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/d7/37691dc5063438a448b646f6f2442b4beebf16cc0e18d8cdfa7aeec60b8c/filelock-4.0.4.tar.gz", hash = "sha256:90999ed63a26ccf86b93b959ab10cf1017f422d816be454ed54cbed263e71ab5", size = 244639, upload-time = "2026-09-26T15:19:12.105Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/33/af0635ab07fe83b1788a1dbe370ff3e226062495a998335cb18a1cac81aa/filelock-4.0.1-py3-none-any.whl", hash = "sha256:481a321a27bef441e23c53371c6abc8d7d16e26b97090074ba44f7538a3fd55a", size = 106219, upload-time = "2026-09-19T01:08:14.49Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/ac/8b9c6dc2aa7e9cf5582e20a337006c3428c3d752c2255dbaca2c78a8be45/filelock-4.0.4-py3-none-any.whl", hash = "sha256:0df72be195ca7892216d16f2edce8d9b93a571f02402972020a8cff84c594c7b", size = 108629, upload-time = "2026-09-26T15:19:10.603Z" },
 ]
 
 [[package]]
@@ -822,15 +822,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ae/15/4500e320e6b101ec3b719ae85b697d9940b6cda672bc555bd6016fc60c6f/pip-26.2.1.tar.gz", hash = "sha256:f6ad667e89a1fe78046c8f13232b247200f5258d7828f3f7883d660878e0813f", size = 1848877, upload-time = "2026-08-04T22:51:14.148Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f3/6e/1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/pip-26.2.1-py3-none-any.whl", hash = "sha256:71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e", size = 1816632, upload-time = "2026-08-04T22:51:12.472Z" },
-]
-
-[[package]]
-name = "platformdirs"
-version = "4.11.11"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f8/13/f870dd0b42690138e4e37a76b5138e5690ed4365a77071bb092d59037da0/platformdirs-4.11.11.tar.gz", hash = "sha256:b0befe8a90759e4a9a8b9820d434ae226a6549063210b596da0038a7a05aede4", size = 39949, upload-time = "2026-09-19T01:18:47.259Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/be/3ae887e84c38c4dd1c549cd5825adc93f48069a94fe1cb8ac52a9da16f15/platformdirs-4.11.11-py3-none-any.whl", hash = "sha256:972ea6b2b387155a536226a0750e46923d731d459a387c4a255c583ed2f64547", size = 24992, upload-time = "2026-09-19T01:18:45.825Z" },
 ]
 
 [[package]]
@@ -1219,7 +1210,7 @@ wheels = [
 
 [[package]]
 name = "seleniumbase"
-version = "4.54.10"
+version = "4.54.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1248,7 +1239,6 @@ dependencies = [
     { name = "parse-type" },
     { name = "pdbp" },
     { name = "pip" },
-    { name = "platformdirs" },
     { name = "pluggy" },
     { name = "psutil" },
     { name = "pyautogui", marker = "sys_platform == 'linux'" },
@@ -1283,9 +1273,9 @@ dependencies = [
     { name = "wheel" },
     { name = "wsproto" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/07/2810b5c66ce8487ab4d51511d754031bb7f139ba272831b5f6b93503b56c/seleniumbase-4.54.10.tar.gz", hash = "sha256:9ee6d1b05afaf947edcbea6af75147c2a3e68b77cadaa63151f02111d9f35d05", size = 696016, upload-time = "2026-09-18T05:07:10.522Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/a4/80890f0dd1040262a8ac7485c4a0e987dff28291261c058862d5b99298c2/seleniumbase-4.54.12.tar.gz", hash = "sha256:20f6f60181911a17327dbcc8e1b0ae51ffa7b2768eac4a3726b8e9dafa13a1b5", size = 696022, upload-time = "2026-09-25T23:10:09.448Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7d/2b/6f3078e5835b61348caf90fd0a0a763244bc2d65f311a7bd0c7dc1451693/seleniumbase-4.54.10-py3-none-any.whl", hash = "sha256:c999d573c0111a4f094e460ed23bbf9d729ee8aebfd542a4ff2aec9b7039c634", size = 700433, upload-time = "2026-09-18T05:07:08.244Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/57/534a16668517098aa8c883a90d73f71a4c7abb5eb9950960b65a57cb286f/seleniumbase-4.54.12-py3-none-any.whl", hash = "sha256:ea4a8bdc18786f4402f176f5966425f1db81b284360edc4d5f8d8624ea9b90f1", size = 700417, upload-time = "2026-09-25T23:10:07.278Z" },
 ]
 
 [[package]]
@@ -1326,11 +1316,11 @@ wheels = [
 
 [[package]]
 name = "soupsieve"
-version = "2.9.2"
+version = "2.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/69/99/a6ca3beb3ccacb41fb3321d8a60e5566f9e6467601ef8eba6a17e1b89778/soupsieve-2.9.2.tar.gz", hash = "sha256:4a55d8cf158a9c2e587fa4922f1bbb91d68ac829e2d6f25403a85747c71daf74", size = 122445, upload-time = "2026-08-07T00:57:24.801Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/c3/1b817965ac12dc002d7c9cd7dfffdd7d4fbf9b45763ef2ffe7b86ee94670/soupsieve-2.10.tar.gz", hash = "sha256:49e9380d7d2905463583bafe285e818c7366a9ed7b3aee221c1ac79c905d8bc0", size = 124337, upload-time = "2026-09-24T02:36:35.048Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/dc/ad025c1ee131eba60c69f4dd5779b18fcf1e6b21a343e2162a84d5d133c7/soupsieve-2.9.2-py3-none-any.whl", hash = "sha256:8089a26fd974ca7a1f30276d3d8492ab266ab15af581642dfe8aa162e0c1c823", size = 37370, upload-time = "2026-08-07T00:57:23.524Z" },
+    { url = "https://files.pythonhosted.org/packages/66/87/5ed59e1d0290564e2027ed066c52b059892c4637741337fc0967183c8d4d/soupsieve-2.10-py3-none-any.whl", hash = "sha256:8596eb8967d744174820280fa62b4542a2e955bfaccca73ed8a13c6eb8e9b502", size = 38019, upload-time = "2026-09-24T02:36:33.709Z" },
 ]
 
 [[package]]
