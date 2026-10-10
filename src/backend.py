@@ -155,9 +155,12 @@ def _get_code_field_fallback(code_mode: CodeMode) -> tuple[ByType, str]:
 
 def _get_code_field(wait: WebDriverWait[WebDriver], code_mode: CodeMode) -> tuple[ByType, str]:
     try:
+        logger.debug(f"Trying to get the code field element with the class selector '{INPUT_CODE_CLASS[1]}'")
         wait.until(EC.presence_of_element_located(INPUT_CODE_CLASS))
+        logger.debug("Code field element found, returning")
         return INPUT_CODE_CLASS
     except TimeoutException:
+        logger.warning(f"Code field not found with the class selector '{INPUT_CODE_CLASS[1]}'. Trying with fallbacks")
         return _get_code_field_fallback(code_mode)
 
 
