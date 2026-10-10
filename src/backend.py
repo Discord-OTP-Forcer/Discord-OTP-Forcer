@@ -412,6 +412,7 @@ def try_codes(session: BrowserSession) -> None:
     make_new_code: bool = True
     rate_limited: bool = False
     random_code: str = ""
+    log_program_finished = logger.critical
 
     logger.info("Starting a Forcer session")
     logger.debug("\n" + pformat(config.program))
@@ -447,6 +448,8 @@ def try_codes(session: BrowserSession) -> None:
             match submission_result:
                 case SubmissionSuccess():
                     logger.debug("Homepage found, trying to extract token")
+                    logger.success("Homepage found!")
+                    log_program_finished = logger.success
                     match extract_token(driver):
                         case TokenFound() as tokenFound:
                             logger.info("FOUND YOUR ACCOUNT'S TOKEN. SAVE IT AND DO NOT LOG OUT OF DISCORD!")
@@ -454,6 +457,7 @@ def try_codes(session: BrowserSession) -> None:
                             tokenFound.save_to_file(Path("secret/token.txt"))
                         case TokenNotFound():
                             logger.warning("Token not found but logged in successfully.")
+                            log_program_finished = logger.warning
                     break
                 case SubmissionError(status=CodeStatusFound(message=code_status_msg, used_fallback=used_fallback)):
                     if used_fallback:
@@ -506,7 +510,7 @@ def try_codes(session: BrowserSession) -> None:
 
     timer.stop()
     sessionStats.elapsedTimeSeconds = timer.elapsed()
-    logger.critical("Program finished!")
+    log_program_finished("Program finished!")
     print_session_statistics(sessionStats)
 
 

@@ -16,11 +16,11 @@ def obfuscate_message(message: str) -> str:
     return message
 
 
-def formatter(record):
+def formatter(record) -> str:
     record["extra"]["obfuscated_message"] = record["message"]
     return "<green>[{time:YYYY-MM-DD HH:mm:ss}]</green> <level>[{level}]</level> - <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{extra[obfuscated_message]}</level>\n{exception}"
 
 
-def formatter_sensitive(record):
+def formatter_sensitive(record) -> str:
     record["extra"]["obfuscated_message"] = obfuscate_message(record["message"])
     return "<green>[{time:YYYY-MM-DD HH:mm:ss}]</green> <level>[{level}]</level> - <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{extra[obfuscated_message]}</level>\n{exception}"
