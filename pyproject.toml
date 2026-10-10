@@ -41,7 +41,7 @@ reportUnknownArgumentType = false
 reportUnknownParameterType = false
 
 [tool.ruff.lint]
-ignore = ["E701", "F841"]
+ignore = ["E701", "F841", "SIM103"]
 
 [tool.ruff.format]
 quote-style = "preserve"
