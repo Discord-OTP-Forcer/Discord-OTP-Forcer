@@ -24,12 +24,12 @@ from .auth.token_extraction import extract_token
 from .lib.codegen import generate_random_code
 from .lib.constants import (
     AUTH_ERROR_INTERCEPTOR_JS,
-    BACKUP_CODE_FIELD,
+    BACKUP_CODE_FIELD_FALLBACK,
     CODE_STATUS_ELT_CLASS,
     HARDEN_WEB_STORAGE_JS,
+    INPUT_CODE_CLASS,
     IS_A_BUG_STRING,
     LOW_ELEMENT_LOAD_TOLERANCE_STRING,
-    NORMAL_CODE_FIELD,
     NORMAL_CODE_FIELD_FALLBACK,
 )
 from .lib.exceptions import CodeFieldNotFound, CredentialsFieldNotFound, InvalidCredentialError, UnhandledCodeModeException
@@ -143,14 +143,22 @@ def _get_landing_url(program_mode: ProgramMode, reset_token: str) -> str:
             assert_never(unreachable)
 
 
-def _get_code_field(code_mode: CodeMode) -> tuple[ByType, str]:
+def _get_code_field_fallback(code_mode: CodeMode) -> tuple[ByType, str]:
     match code_mode:
         case CodeMode_Backup():
-            return BACKUP_CODE_FIELD
+            return BACKUP_CODE_FIELD_FALLBACK
         case CodeMode_Normal():
-            return NORMAL_CODE_FIELD
+            return NORMAL_CODE_FIELD_FALLBACK
         case _:
             raise UnhandledCodeModeException(f"Unhandled code mode: {code_mode}")
+
+
+def _get_code_field(wait: WebDriverWait[WebDriver], code_mode: CodeMode) -> tuple[ByType, str]:
+    try:
+        wait.until(EC.presence_of_element_located(INPUT_CODE_CLASS))
+        return INPUT_CODE_CLASS
+    except TimeoutException:
+        return _get_code_field_fallback(code_mode)
 
 
 def _is_error_or_2fa_present(driver: WebDriver) -> bool:
@@ -159,9 +167,11 @@ def _is_error_or_2fa_present(driver: WebDriver) -> bool:
         return True
     if driver.find_elements(By.XPATH, "//*[contains(text(), 'Verify with something else')]"):
         return True
-    if driver.find_elements(*NORMAL_CODE_FIELD) or driver.find_elements(*NORMAL_CODE_FIELD_FALLBACK):
+    if driver.find_elements(*INPUT_CODE_CLASS):
         return True
-    return bool(driver.find_elements(*BACKUP_CODE_FIELD))
+    if driver.find_elements(*NORMAL_CODE_FIELD_FALLBACK) or driver.find_elements(*BACKUP_CODE_FIELD_FALLBACK):
+        return True
+    return False
 
 
 def _wait_for_auth_response_or_2fa(driver: WebDriver) -> None:
@@ -250,7 +260,7 @@ def _check_if_code_field_exists(driver: WebDriver, config: Config) -> None:
     wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
 
     try:
-        code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
+        code_field: tuple[ByType, str] = _get_code_field(wait, config.program.codeMode)
         wait.until(EC.presence_of_element_located(code_field))
     except TimeoutException:
         msg: str = f"Could not locate the code field on the page. {LOW_ELEMENT_LOAD_TOLERANCE_STRING}"
@@ -397,6 +407,7 @@ def try_codes(session: BrowserSession) -> None:
     driver: WebDriver = session.driver
     config: Config = session.config
 
+    wait: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance)
     user_wait_longer: WebDriverWait[WebDriver] = WebDriverWait(driver, config.program.elementLoadTolerance * 3)
 
     # Set up statistics counters
@@ -406,7 +417,7 @@ def try_codes(session: BrowserSession) -> None:
     sleep_duration_range: list[int]
 
     submit_button: tuple[ByType, str] = (By.XPATH, "//*[@type='submit']")
-    code_field: tuple[ByType, str] = _get_code_field(config.program.codeMode)
+    code_field: tuple[ByType, str] = _get_code_field(wait, config.program.codeMode)
     code_status_elt: tuple[ByType, str] = CODE_STATUS_ELT_CLASS
 
     make_new_code: bool = True
