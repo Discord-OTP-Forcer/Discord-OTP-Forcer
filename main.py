@@ -1,3 +1,5 @@
+from loguru import logger
+
 from src.auth.token_login import login_with_discord_auth_token
 from src.backend import bootstrap_browser, bootstrap_code_page, try_codes
 from src.config.config_parser import load_configuration
@@ -7,12 +9,15 @@ from src.lib.types import (
     CensoredStr,
     TokenFound,
 )
-from src.logger.log_init import initialize_check_logger, initialize_logger
+from src.logger.log_init import initialize_program_logger, intialize_config_validator_logger
 
 if __name__ == "__main__":
-    initialize_check_logger()
+    intialize_config_validator_logger()
     config = load_configuration("config/account.yml", "config/program.yml")
-    initialize_logger(config.program)
+    initialize_program_logger(config.program)
+
+    logger.debug("Loaded config/account.yml and config/program.yml config files.")
+
     session: BrowserSession | None = None
 
     if config.program.checkUpdates:
