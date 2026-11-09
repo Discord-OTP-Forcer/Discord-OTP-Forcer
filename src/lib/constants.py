@@ -31,7 +31,7 @@ NORMAL_CODE_FIELD_FALLBACK: Final[tuple[ByType, str]] = (
     " | ".join(NORMAL_CODE_FIELD_FALLBACK_STRINGS),
 )
 
-CAPTCHA_CONTAINER_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "container__8a031")
-INPUT_CODE_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "input__75098")
-CODE_STATUS_ELT_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "error__7c901")
-HOMEPAGE_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "app__160d8")
+CAPTCHA_CONTAINER_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "container_dvN-MP")
+INPUT_CODE_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "input_0PLWhS")
+CODE_STATUS_ELT_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "error_b5g7JS")
+HOMEPAGE_CLASS: Final[tuple[ByType, str]] = (By.CLASS_NAME, "app_QbT-Jy")
